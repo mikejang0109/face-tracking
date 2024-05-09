@@ -8,6 +8,7 @@ from core.facedetector import FaceDetector
 from utils.associate_detection_trackers import associate_detections_to_trackers
 from filterpy.kalman import KalmanFilter
 import time
+from deepface import DeepFace
 
 class KalmanTracker(object):
     counter = 1
@@ -41,14 +42,12 @@ class KalmanTracker(object):
         bbox = (np.array([self.kf.x[0], self.kf.x[1], self.kf.x[2], self.kf.x[3]]).reshape((1, 4)))
         return bbox
 
-
 class FaceTracker(object):
     def __init__(self):
         self.current_trackers = []
 
     def __call__(self, detections):
         retain_trackers = []
-
         if len(self.current_trackers) == 0:
             self.current_trackers = []
             for d in range(len(detections)):
@@ -58,152 +57,114 @@ class FaceTracker(object):
                                         [int(detections[d, 3])]], np.float32)
                 tracker.correction(measurement)
                 self.current_trackers.append(tracker)
-
             for trk in self.current_trackers:
                 d = trk.get_current_x()
                 retain_trackers.append(np.concatenate((d[0], [trk.id])).reshape(1, -1))
-
             if len(retain_trackers) > 0:
                 return np.concatenate(retain_trackers)
-
             return np.empty((0, 5))
-
         else:
             predicted_trackers = []
             for t in range(len(self.current_trackers)):
                 predictions = self.current_trackers[t]()[:4]
                 predicted_trackers.append(predictions)
-
             predicted_trackers = np.asarray(predicted_trackers)
-
-            matched, unmatched_detections, unmatched_trackers = associate_detections_to_trackers(detections[:, :],
-                                                                                                 predicted_trackers)
-
-            print('Matched Detections & Trackers', len(matched))
-            print('Unmatched Detections', len(unmatched_detections))
-            print('Unmatched Trackers', len(unmatched_trackers))
-            print('Current Trackers', len(self.current_trackers))
-
+            matched, unmatched_detections, unmatched_trackers = associate_detections_to_trackers(detections[:, :],predicted_trackers)
+            #print('Matched Detections & Trackers', len(matched))
+            #print('Unmatched Detections', len(unmatched_detections))
+            #print('Unmatched Trackers', len(unmatched_trackers))
+            #print('Current Trackers', len(self.current_trackers))
             for t in range(len(self.current_trackers)):
                 if t not in unmatched_trackers:
                     d = matched[np.where(matched[:, 1] == t)[0], 0]
-                    self.current_trackers[t].correction(np.array([detections[d, 0], detections[d, 1],
-                                                                  detections[d, 2], detections[d, 3]]).reshape((4, 1)))
-
+                    self.current_trackers[t].correction(np.array([detections[d, 0], detections[d, 1],detections[d, 2], detections[d, 3]]).reshape((4, 1)))
             for i in unmatched_detections:
                 tracker = KalmanTracker(detections[i, :])
                 measurement = np.array((4, 1), np.float32)
-                measurement = np.array([[int(detections[i, 0])], [int(detections[i, 1])], [int(detections[i, 2])],
-                                        [int(detections[i, 3])]], np.float32)
+                measurement = np.array([[int(detections[i, 0])], [int(detections[i, 1])], [int(detections[i, 2])],[int(detections[i, 3])]], np.float32)
                 tracker.correction(measurement)
                 self.current_trackers.append(tracker)
-
             for index in sorted(unmatched_trackers, reverse=True):
                 del self.current_trackers[index]
-
             for trk in self.current_trackers:
                 d = trk.get_current_x()
                 retain_trackers.append(np.concatenate((d[0], [trk.id])).reshape(1, -1))
-
         if len(retain_trackers) > 0:
             return np.concatenate(retain_trackers)
-
         return np.empty((0, 5))
-
 
 def read_detect_track_faces(videopath, facedetector, display=True):
     facetracker = FaceTracker()
     detection_frame_rate = 5
-
-    #jsonfile = open('./meta/' + videopath.split('/')[2].split('.')[0] + '_tracking_meta.json', 'w')
-
     videocapture = cv2.VideoCapture(videopath)
     success, frame = videocapture.read()
     frame_number = 1
-
-    faces_per_person = [[np.zeros((224,224))]]
-
+    faces_per_person = [[np.zeros((224, 224))]]
+    original_faces = [-1]
     if display:
         colours = np.random.rand(32, 3)
-        #plt.ion()
-        #plt.ioff()
-        #fig = plt.figure()
-        #print('Display Initialized')
-
     while success:
         success, frame = videocapture.read()
-        if success==False:
+        if success == False:
             break
         if display:
             pass
-            #ax1 = fig.add_subplot(111, aspect='equal')
-            #ax1.imshow(frame)
-            #plt.title('Tracked Targets')
-        #print(frame_number)
         if (frame_number % detection_frame_rate == 0) or (frame_number == 1):
             faces = facedetector.detect(frame)
-        #print('Faces',faces)
-        #print('face shape',faces.shape[0])
         if faces.shape[0] == 0:
             continue
         trackers = facetracker(faces)
         frame_number += 1
-        #print('frame_number',frame_number)
         img = frame.copy()
         ord_image = frame.copy()
         for tracker in trackers:
             tracker = tracker.astype(np.int32)
             person_id = int(tracker[-1])
+            face = cv2.resize(ord_image[tracker[1]:tracker[3], tracker[0]:tracker[2], :], (224, 224))
             if len(faces_per_person) <= person_id:
                 faces_per_person.append([])
-            faces_per_person[person_id].append(cv2.resize(ord_image[tracker[1]:tracker[3],tracker[0]:tracker[2],:],(224,224)))
+                original_faces.append(person_id)
+                # for i in range(1, person_id - 1):
+                #     if original_faces[i] != i:
+                #         continue
+                #     faceresult = DeepFace.verify(faces_per_person[original_faces[i]][0], face,enforce_detection=False)
+                #     if faceresult['verified'] == True and faceresult['distance']<=0.15:
+                #         print('Distance',faceresult['distance'])
+                #         original_faces[person_id] = original_faces[i]
+                #         break
+                # else:
+                #     original_faces[person_id] = person_id
+            faces_per_person[original_faces[person_id]].append(face)
             data = {'frame number': str(frame_number + 1), 'person number': str(int(tracker[-1])),
                     'bounding box': str(tracker[:-1])}
-            #json.dump(data, jsonfile)
-            #jsonfile.write('\n')
             print(data)
-
             if display:
                 cv2.rectangle(img, (tracker[0], tracker[1]), (tracker[2], tracker[3]), (255, 0, 0), 2)
-                #ax1.add_patch(
-                #    patches.Rectangle((tracker[0], tracker[1]), tracker[2] - tracker[0], tracker[3] - tracker[1],
-                #                      fill=False, lw=3, ec=colours[tracker[4] % 32, :]))
-                #plt.text(tracker[2] - 30, tracker[3] + 10, 'Person ' + str(tracker[4]), fontsize=5,
-                #         color=colours[tracker[4] % 32, :])
-
         if display:
-            cv2.imshow('Face Tracker', cv2.resize(img,(640,480)))
+            cv2.imshow('Face Tracker', cv2.resize(img, (640, 480)))
             if cv2.waitKey(1) == ord('q'):
                 return
-            #fig.canvas.flush_events()
-            #plt.draw()
-            #ax1.cla()
     return faces_per_person
 
-#
-# def parse_args():
-#     parser = argparse.ArgumentParser(description='Tracking Arguments')
-#     parser.add_argument('--detector', default='RetinaFaceDetector', help='Face Detector')
-#     parser.add_argument('--gpu', default=-1, help='CUDA Availability')
-#     parser.add_argument('--videopath', help='Input Video Path')
-#     args = parser.parse_args()
-#     return args
-
+def parse_args():
+    parser = argparse.ArgumentParser(description='Tracking Arguments')
+    parser.add_argument('--videopath', help='Input Video Path')
+    args = parser.parse_args()
+    return args
 
 if __name__ == "__main__":
-
+    args = parse_args()
     detector_name = "mymodel"
-    videopath = r"./test/2.mp4"
-
+    videopath = args.videopath
     facedetector = FaceDetector(detector_name)
-
     result = read_detect_track_faces(videopath, facedetector, True)
-
     for i, frames in enumerate(result):
         if i == 0:
             continue
+        if len(frames) == 0:
+            continue
         fourcc = cv2.VideoWriter_fourcc(*'mp4v')
-        out = cv2.VideoWriter(f'./test/output/person_{i}.mp4',fourcc,30.0,(224,224))
+        out = cv2.VideoWriter(f'./test/output/person_{i}.mp4', fourcc, 30.0, (224, 224))
         for frame in frames:
             out.write(frame)
         out.release()
