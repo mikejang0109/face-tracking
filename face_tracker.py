@@ -137,9 +137,9 @@ def read_detect_track_faces(videopath, facedetector, display=True):
                     'bounding box': str(tracker[:-1])}
             print(data)
             if display:
-                cv2.rectangle(img, (tracker[0], tracker[1]), (tracker[2], tracker[3]), (255, 0, 0), 2)
+                cv2.rectangle(img, (tracker[0], tracker[1]), (tracker[2], tracker[3]), (0, 0, 255), 2)
         if display:
-            cv2.imshow('Face Tracker', cv2.resize(img, (640, 480)))
+            cv2.imshow('Face Tracker', cv2.resize(img, (320, 240)))
             if cv2.waitKey(1) == ord('q'):
                 return
     return faces_per_person
