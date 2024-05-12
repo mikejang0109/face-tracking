@@ -1,15 +1,11 @@
 import cv2
-import json
 import argparse
 import numpy as np
-import matplotlib.pyplot as plt
-import matplotlib.patches as patches
-from core.facedetector import FaceDetector
+from core.facedetector import FaceDetector, ImageFaceExtractor
 from utils.associate_detection_trackers import associate_detections_to_trackers
 from filterpy.kalman import KalmanFilter
-import time
 import os
-from deepface import DeepFace
+#from deepface import DeepFace
 
 class KalmanTracker(object):
     counter = 1
@@ -118,6 +114,7 @@ def read_detect_track_faces(videopath, facedetector, display=True):
         frame_number += 1
         img = frame.copy()
         ord_image = frame.copy()
+        trackers = ImageFaceExtractor.add_margin_to_detection(trackers,ord_image.shape)
         for tracker in trackers:
             tracker = tracker.astype(np.int32)
             person_id = int(tracker[-1])
@@ -160,7 +157,7 @@ if __name__ == "__main__":
     output_path = f'./test/output_{os.path.basename(videopath)}'
     facedetector = FaceDetector(detector_name)
     result = read_detect_track_faces(videopath, facedetector, True)
-    os.mkdir(output_path)
+    os.makedirs(output_path,exist_ok=True)
     for i, frames in enumerate(result):
         if i == 0:
             continue

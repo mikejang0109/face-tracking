@@ -44,10 +44,11 @@ class ImageFaceExtractor(GlobalInstanceAbstract):
         boxes = self.predict_bbox(detections, org_image.shape[1], org_image.shape[0])
         #return self._crop_face_from_bbox(org_image, boxes)
         #print(boxes)
-        return self._add_margin_to_detection(boxes, org_image.shape)
+        #return self._add_margin_to_detection(boxes, org_image.shape)
+        return boxes
 
     def _crop_face_from_bbox(self, image: np.ndarray, bboxes: np.ndarray):
-        result_bboxes = self._add_margin_to_detection(bboxes, image.shape)
+        result_bboxes = self.add_margin_to_detection(bboxes, image.shape)
         result_faces = []
         for i in range(result_bboxes.shape[0]):
             bbox = result_bboxes[i]
@@ -56,7 +57,8 @@ class ImageFaceExtractor(GlobalInstanceAbstract):
             result_faces.append(face)
         return np.array(result_faces)
 
-    def _add_margin_to_detection(self, bboxes: np.ndarray, frame_size: Tuple[int, int], margin: float=0.2):
+    @staticmethod
+    def add_margin_to_detection(bboxes: np.ndarray, frame_size: Tuple[int, int], margin: float=0.2):
         result_bbox = []
         for i in range(bboxes.shape[0]):
             bbox = bboxes[i]
@@ -72,7 +74,8 @@ class ImageFaceExtractor(GlobalInstanceAbstract):
             result_bbox.append(bbox)
         return np.array(result_bbox)
 
-    def _preprocess(self, org_image: np.ndarray):
+    @staticmethod
+    def _preprocess(org_image: np.ndarray):
         image = cv2.cvtColor(org_image, cv2.COLOR_BGR2RGB)
         image = cv2.resize(image, (320, 240))
         image_mean = np.array([127, 127, 127])
