@@ -8,6 +8,7 @@ from core.facedetector import FaceDetector
 from utils.associate_detection_trackers import associate_detections_to_trackers
 from filterpy.kalman import KalmanFilter
 import time
+import os
 from deepface import DeepFace
 
 class KalmanTracker(object):
@@ -156,15 +157,17 @@ if __name__ == "__main__":
     args = parse_args()
     detector_name = "mymodel"
     videopath = args.videopath
+    output_path = f'./test/output_{os.path.basename(videopath)}'
     facedetector = FaceDetector(detector_name)
     result = read_detect_track_faces(videopath, facedetector, True)
+    os.mkdir(output_path)
     for i, frames in enumerate(result):
         if i == 0:
             continue
         if len(frames) == 0:
             continue
         fourcc = cv2.VideoWriter_fourcc(*'mp4v')
-        out = cv2.VideoWriter(f'./test/output/person_{i}.mp4', fourcc, 30.0, (224, 224))
+        out = cv2.VideoWriter(f'{output_path}/person_{i}.mp4', fourcc, 30.0, (224, 224))
         for frame in frames:
             out.write(frame)
         out.release()
