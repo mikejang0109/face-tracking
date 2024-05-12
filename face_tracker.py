@@ -154,17 +154,18 @@ if __name__ == "__main__":
     args = parse_args()
     detector_name = "mymodel"
     videopath = args.videopath
-    output_path = f'./test/output_{os.path.basename(videopath)}'
+    output_path = f'./test/output'
     facedetector = FaceDetector(detector_name)
     result = read_detect_track_faces(videopath, facedetector, True)
     os.makedirs(output_path,exist_ok=True)
+    basefilename = os.path.basename(videopath).replace('.','_')
     for i, frames in enumerate(result):
         if i == 0:
             continue
         if len(frames) == 0:
             continue
         fourcc = cv2.VideoWriter_fourcc(*'mp4v')
-        out = cv2.VideoWriter(f'{output_path}/person_{i}.mp4', fourcc, 30.0, (224, 224))
+        out = cv2.VideoWriter(f'{output_path}/{basefilename}_person_{i}.mp4', fourcc, 30.0, (224, 224))
         for frame in frames:
             out.write(frame)
         out.release()
