@@ -4,6 +4,7 @@ import numpy as np
 from core.facedetector import FaceDetector, ImageFaceExtractor
 from utils.associate_detection_trackers import associate_detections_to_trackers
 from filterpy.kalman import KalmanFilter
+from pathlib import Path
 import os
 #from deepface import DeepFace
 
@@ -38,6 +39,10 @@ class KalmanTracker(object):
     def get_current_x(self):
         bbox = (np.array([self.kf.x[0], self.kf.x[1], self.kf.x[2], self.kf.x[3]]).reshape((1, 4)))
         return bbox
+
+    @classmethod
+    def reset_counter(cls):
+        cls.counter = 1
 
 class FaceTracker(object):
     def __init__(self):
@@ -146,26 +151,50 @@ def read_detect_track_faces(videopath, facedetector, display=True):
 
 def parse_args():
     parser = argparse.ArgumentParser(description='Tracking Arguments')
-    parser.add_argument('--videopath', help='Input Video Path')
+    parser.add_argument('--videofile', help='Input Video File',required=False)
+    parser.add_argument('--videopath',help='Input Video Path',required=False)
     args = parser.parse_args()
     return args
 
 if __name__ == "__main__":
     args = parse_args()
     detector_name = "mymodel"
-    videopath = args.videopath
-    output_path = f'./test/output'
-    facedetector = FaceDetector(detector_name)
-    result = read_detect_track_faces(videopath, facedetector, True)
-    os.makedirs(output_path,exist_ok=True)
-    basefilename = os.path.basename(videopath).replace('.','_')
-    for i, frames in enumerate(result):
-        if i == 0:
-            continue
-        if len(frames) == 0:
-            continue
-        fourcc = cv2.VideoWriter_fourcc(*'mp4v')
-        out = cv2.VideoWriter(f'{output_path}/{basefilename}_person_{i}.mp4', fourcc, 30.0, (224, 224))
-        for frame in frames:
-            out.write(frame)
-        out.release()
+    video_file_path = args.videofile
+    video_dir_path = args.videopath
+    if video_dir_path == None:
+        output_path = f'./test/output'
+        facedetector = FaceDetector(detector_name)
+        result = read_detect_track_faces(video_file_path, facedetector, True)
+        os.makedirs(output_path,exist_ok=True)
+        basefilename = os.path.basename(video_file_path).replace('.', '_')
+        for i, frames in enumerate(result):
+            if i == 0:
+                continue
+            if len(frames) == 0:
+                continue
+            fourcc = cv2.VideoWriter_fourcc(*'mp4v')
+            out = cv2.VideoWriter(f'{output_path}/{basefilename}_person_{i}.mp4', fourcc, 30.0, (224, 224))
+            for frame in frames:
+                out.write(frame)
+            out.release()
+    else:
+        video_files = list(Path(video_dir_path).glob("*.mp4"))
+        for videofilename in video_files:
+            KalmanTracker.reset_counter()
+            videofilename = str(videofilename)
+            print(videofilename)
+            output_path = f'./test/output'
+            facedetector = FaceDetector(detector_name)
+            result = read_detect_track_faces(videofilename, facedetector, True)
+            os.makedirs(output_path, exist_ok=True)
+            basefilename = os.path.basename(videofilename).replace('.', '_')
+            for i, frames in enumerate(result):
+                if i == 0:
+                    continue
+                if len(frames) == 0:
+                    continue
+                fourcc = cv2.VideoWriter_fourcc(*'mp4v')
+                out = cv2.VideoWriter(f'{output_path}/{basefilename}_person_{i}.mp4', fourcc, 30.0, (224, 224))
+                for frame in frames:
+                    out.write(frame)
+                out.release()
