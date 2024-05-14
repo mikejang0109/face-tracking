@@ -178,23 +178,27 @@ if __name__ == "__main__":
                 out.write(frame)
             out.release()
     else:
-        video_files = list(Path(video_dir_path).glob("*.mp4"))
+        video_files = list(Path(video_dir_path).rglob("*.mp4"))
         for videofilename in video_files:
-            KalmanTracker.reset_counter()
-            videofilename = str(videofilename)
-            print(videofilename)
-            output_path = f'./test/output'
-            facedetector = FaceDetector(detector_name)
-            result = read_detect_track_faces(videofilename, facedetector, True)
-            os.makedirs(output_path, exist_ok=True)
-            basefilename = os.path.basename(videofilename).replace('.', '_')
-            for i, frames in enumerate(result):
-                if i == 0:
-                    continue
-                if len(frames) == 0:
-                    continue
-                fourcc = cv2.VideoWriter_fourcc(*'mp4v')
-                out = cv2.VideoWriter(f'{output_path}/{basefilename}_person_{i}.mp4', fourcc, 30.0, (224, 224))
-                for frame in frames:
-                    out.write(frame)
-                out.release()
+            if videofilename.is_file():
+                relative_path = videofilename.relative_to(video_dir_path)
+                #print(relative_path)
+                KalmanTracker.reset_counter()
+                videofilename = str(videofilename)
+                #print(videofilename)
+                output_path = Path('test') / 'output' / relative_path
+                #print(output_path)
+                facedetector = FaceDetector(detector_name)
+                result = read_detect_track_faces(videofilename, facedetector, True)
+                os.makedirs(output_path, exist_ok=True)
+                basefilename = os.path.basename(videofilename).replace('.', '_')
+                for i, frames in enumerate(result):
+                    if i == 0:
+                        continue
+                    if len(frames) == 0:
+                        continue
+                    fourcc = cv2.VideoWriter_fourcc(*'H264')
+                    out = cv2.VideoWriter(f'{output_path}/{basefilename}_person_{i}.mp4', fourcc, 30.0, (224, 224))
+                    for frame in frames:
+                        out.write(frame)
+                    out.release()
