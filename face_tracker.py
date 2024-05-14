@@ -197,7 +197,7 @@ if __name__ == "__main__":
                         continue
                     if len(frames) == 0:
                         continue
-                    fourcc = cv2.VideoWriter_fourcc(*'H264')
+                    fourcc = cv2.VideoWriter_fourcc(*'mp4v')
                     out = cv2.VideoWriter(f'{output_path}/{basefilename}_person_{i}.mp4', fourcc, 30.0, (224, 224))
                     for frame in frames:
                         out.write(frame)
