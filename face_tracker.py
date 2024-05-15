@@ -97,7 +97,7 @@ class FaceTracker(object):
 
 def read_detect_track_faces(videopath, facedetector, display=True):
     facetracker = FaceTracker()
-    detection_frame_rate = 5
+    detection_frame_rate = 1
     videocapture = cv2.VideoCapture(videopath)
     success, frame = videocapture.read()
     frame_number = 1
