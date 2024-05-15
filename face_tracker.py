@@ -103,20 +103,17 @@ def read_detect_track_faces(videopath, facedetector, display=True):
     frame_number = 1
     faces_per_person = [[np.zeros((224, 224))]]
     original_faces = [-1]
-    if display:
-        colours = np.random.rand(32, 3)
     while success:
         success, frame = videocapture.read()
         if success == False:
             break
-        if display:
-            pass
         if (frame_number % detection_frame_rate == 0) or (frame_number == 1):
             faces = facedetector.detect(frame)
         if faces.shape[0] == 0:
             continue
         trackers = facetracker(faces)
         frame_number += 1
+        print(frame_number)
         img = frame.copy()
         ord_image = frame.copy()
         trackers = ImageFaceExtractor.add_margin_to_detection(trackers,ord_image.shape)
@@ -179,6 +176,7 @@ if __name__ == "__main__":
                 out.write(frame)
             out.release()
     else:
+        print('Video Directory Mode')
         video_files = list(Path(video_dir_path).rglob("*.mp4"))
         for videofilename in video_files:
             if videofilename.is_file():
