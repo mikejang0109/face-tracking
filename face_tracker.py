@@ -6,7 +6,9 @@ from utils.associate_detection_trackers import associate_detections_to_trackers
 from filterpy.kalman import KalmanFilter
 from pathlib import Path
 import os
-#from deepface import DeepFace
+
+
+# from deepface import DeepFace
 
 class KalmanTracker(object):
     counter = 1
@@ -44,6 +46,7 @@ class KalmanTracker(object):
     def reset_counter(cls):
         cls.counter = 1
 
+
 class FaceTracker(object):
     def __init__(self):
         self.current_trackers = []
@@ -71,19 +74,23 @@ class FaceTracker(object):
                 predictions = self.current_trackers[t]()[:4]
                 predicted_trackers.append(predictions)
             predicted_trackers = np.asarray(predicted_trackers)
-            matched, unmatched_detections, unmatched_trackers = associate_detections_to_trackers(detections[:, :],predicted_trackers)
-            #print('Matched Detections & Trackers', len(matched))
-            #print('Unmatched Detections', len(unmatched_detections))
-            #print('Unmatched Trackers', len(unmatched_trackers))
-            #print('Current Trackers', len(self.current_trackers))
+            matched, unmatched_detections, unmatched_trackers = associate_detections_to_trackers(detections[:, :],
+                                                                                                 predicted_trackers)
+            # print('Matched Detections & Trackers', len(matched))
+            # print('Unmatched Detections', len(unmatched_detections))
+            # print('Unmatched Trackers', len(unmatched_trackers))
+            # print('Current Trackers', len(self.current_trackers))
             for t in range(len(self.current_trackers)):
                 if t not in unmatched_trackers:
                     d = matched[np.where(matched[:, 1] == t)[0], 0]
-                    self.current_trackers[t].correction(np.array([detections[d, 0], detections[d, 1],detections[d, 2], detections[d, 3]]).reshape((4, 1)))
+                    self.current_trackers[t].correction(
+                        np.array([detections[d, 0], detections[d, 1], detections[d, 2], detections[d, 3]]).reshape(
+                            (4, 1)))
             for i in unmatched_detections:
                 tracker = KalmanTracker(detections[i, :])
                 measurement = np.array((4, 1), np.float32)
-                measurement = np.array([[int(detections[i, 0])], [int(detections[i, 1])], [int(detections[i, 2])],[int(detections[i, 3])]], np.float32)
+                measurement = np.array([[int(detections[i, 0])], [int(detections[i, 1])], [int(detections[i, 2])],
+                                        [int(detections[i, 3])]], np.float32)
                 tracker.correction(measurement)
                 self.current_trackers.append(tracker)
             for index in sorted(unmatched_trackers, reverse=True):
@@ -95,9 +102,10 @@ class FaceTracker(object):
             return np.concatenate(retain_trackers)
         return np.empty((0, 5))
 
+
 def read_detect_track_faces(videopath, facedetector, display=True):
     facetracker = FaceTracker()
-    detection_frame_rate = 1
+    detection_frame_rate = 5
     videocapture = cv2.VideoCapture(videopath)
     success, frame = videocapture.read()
     frame_number = 1
@@ -115,7 +123,7 @@ def read_detect_track_faces(videopath, facedetector, display=True):
         frame_number += 1
         img = frame.copy()
         ord_image = frame.copy()
-        trackers = ImageFaceExtractor.add_margin_to_detection(trackers,ord_image.shape)
+        trackers = ImageFaceExtractor.add_margin_to_detection(trackers, ord_image.shape)
         for tracker in trackers:
             tracker = tracker.astype(np.int32)
             person_id = int(tracker[-1])
@@ -145,12 +153,14 @@ def read_detect_track_faces(videopath, facedetector, display=True):
                 return
     return faces_per_person
 
+
 def parse_args():
     parser = argparse.ArgumentParser(description='Tracking Arguments')
-    parser.add_argument('--videofile', help='Input Video File',required=False)
-    parser.add_argument('--videopath',help='Input Video Path',required=False)
+    parser.add_argument('--videofile', help='Input Video File', required=False)
+    parser.add_argument('--videopath', help='Input Video Path', required=False)
     args = parser.parse_args()
     return args
+
 
 if __name__ == "__main__":
     args = parse_args()
@@ -162,7 +172,7 @@ if __name__ == "__main__":
         output_path = f'./test/output'
         facedetector = FaceDetector(detector_name)
         result = read_detect_track_faces(video_file_path, facedetector, True)
-        os.makedirs(output_path,exist_ok=True)
+        os.makedirs(output_path, exist_ok=True)
         basefilename = os.path.basename(video_file_path).replace('.', '_')
         for i, frames in enumerate(result):
             if i == 0:
@@ -183,9 +193,9 @@ if __name__ == "__main__":
                 print(relative_path)
                 KalmanTracker.reset_counter()
                 videofilename = str(videofilename)
-                #print(videofilename)
+                # print(videofilename)
                 output_path = Path('test') / 'output' / relative_path
-                #print(output_path)
+                # print(output_path)
                 facedetector = FaceDetector(detector_name)
                 result = read_detect_track_faces(videofilename, facedetector, True)
                 os.makedirs(output_path, exist_ok=True)
