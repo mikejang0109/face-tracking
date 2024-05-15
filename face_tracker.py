@@ -161,7 +161,8 @@ if __name__ == "__main__":
     detector_name = "mymodel"
     video_file_path = args.videofile
     video_dir_path = args.videopath
-    if video_dir_path == None:
+    if video_dir_path is None:
+        print('Single File Mode')
         output_path = f'./test/output'
         facedetector = FaceDetector(detector_name)
         result = read_detect_track_faces(video_file_path, facedetector, True)
