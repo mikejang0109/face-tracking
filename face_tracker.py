@@ -105,6 +105,7 @@ def read_detect_track_faces(videopath, facedetector, display=True):
     original_faces = [-1]
     while success:
         success, frame = videocapture.read()
+        print(frame_number, success)
         if success == False:
             break
         if (frame_number % detection_frame_rate == 0) or (frame_number == 1):
@@ -113,7 +114,6 @@ def read_detect_track_faces(videopath, facedetector, display=True):
             continue
         trackers = facetracker(faces)
         frame_number += 1
-        print(frame_number)
         img = frame.copy()
         ord_image = frame.copy()
         trackers = ImageFaceExtractor.add_margin_to_detection(trackers,ord_image.shape)
