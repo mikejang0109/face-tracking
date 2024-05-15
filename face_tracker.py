@@ -112,11 +112,11 @@ def read_detect_track_faces(videopath, facedetector, display=True):
         if faces.shape[0] == 0:
             continue
         trackers = facetracker(faces)
+        print(frame_number, success, len(trackers))
         frame_number += 1
         img = frame.copy()
         ord_image = frame.copy()
         trackers = ImageFaceExtractor.add_margin_to_detection(trackers,ord_image.shape)
-        print(frame_number, success,len(trackers))
         for tracker in trackers:
             tracker = tracker.astype(np.int32)
             person_id = int(tracker[-1])
