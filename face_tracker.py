@@ -109,10 +109,10 @@ def read_detect_track_faces(videopath, facedetector, display=True):
             break
         if (frame_number % detection_frame_rate == 0) or (frame_number == 1):
             faces = facedetector.detect(frame)
+        print(frame_number,success,faces.shape)
         if faces.shape[0] == 0:
             continue
         trackers = facetracker(faces)
-        print(frame_number, success, len(trackers))
         frame_number += 1
         img = frame.copy()
         ord_image = frame.copy()
