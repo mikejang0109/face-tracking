@@ -1,18 +1,23 @@
 from __future__ import annotations
+
 from pathlib import Path
 from typing import Tuple
+
 import cv2
 import numpy as np
+
 from utils.abs import GlobalInstanceAbstract
-from utils.utils import monitor_execution_time
+
 
 class FaceDetector(object):
     def __init__(self, detectorname):
         if detectorname == 'mymodel':
             self.detector = ImageFaceExtractor()
         pass
+
     def detect(self, image):
         return self.detector(image)
+
 
 class ImageFaceExtractor(GlobalInstanceAbstract):
     def __init__(self):
@@ -42,9 +47,9 @@ class ImageFaceExtractor(GlobalInstanceAbstract):
         self.__tf_face_detector.setInput(tf_blob)
         detections = self.__tf_face_detector.forward()
         boxes = self.predict_bbox(detections, org_image.shape[1], org_image.shape[0])
-        #return self._crop_face_from_bbox(org_image, boxes)
-        #print(boxes)
-        #return self._add_margin_to_detection(boxes, org_image.shape)
+        # return self._crop_face_from_bbox(org_image, boxes)
+        # print(boxes)
+        # return self._add_margin_to_detection(boxes, org_image.shape)
         return boxes
 
     def _crop_face_from_bbox(self, image: np.ndarray, bboxes: np.ndarray):
@@ -58,7 +63,7 @@ class ImageFaceExtractor(GlobalInstanceAbstract):
         return np.array(result_faces)
 
     @staticmethod
-    def add_margin_to_detection(bboxes: np.ndarray, frame_size: Tuple[int, int], margin: float=0.2):
+    def add_margin_to_detection(bboxes: np.ndarray, frame_size: Tuple[int, int], margin: float = 0.2):
         result_bbox = []
         for i in range(bboxes.shape[0]):
             bbox = bboxes[i]
@@ -84,6 +89,7 @@ class ImageFaceExtractor(GlobalInstanceAbstract):
         image = np.expand_dims(image, axis=0)
         image = image.astype(np.float32)
         return image
+
 
 __all__ = [
     'ImageFaceExtractor',

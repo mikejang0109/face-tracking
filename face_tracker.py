@@ -1,14 +1,17 @@
-import cv2
 import argparse
+import os
+from pathlib import Path
+
+import cv2
 import numpy as np
+from colorama import Fore, init
+from filterpy.kalman import KalmanFilter
+from loguru import logger
+from tqdm import tqdm
+
 from core.facedetector import FaceDetector, ImageFaceExtractor
 from utils.associate_detection_trackers import associate_detections_to_trackers
-from filterpy.kalman import KalmanFilter
-from pathlib import Path
-import os
 
-
-# from deepface import DeepFace
 
 class KalmanTracker(object):
     counter = 1
@@ -76,10 +79,6 @@ class FaceTracker(object):
             predicted_trackers = np.asarray(predicted_trackers)
             matched, unmatched_detections, unmatched_trackers = associate_detections_to_trackers(detections[:, :],
                                                                                                  predicted_trackers)
-            # print('Matched Detections & Trackers', len(matched))
-            # print('Unmatched Detections', len(unmatched_detections))
-            # print('Unmatched Trackers', len(unmatched_trackers))
-            # print('Current Trackers', len(self.current_trackers))
             for t in range(len(self.current_trackers)):
                 if t not in unmatched_trackers:
                     d = matched[np.where(matched[:, 1] == t)[0], 0]
@@ -108,6 +107,8 @@ def read_detect_track_faces(videopath, facedetector, display=True):
     detection_frame_rate = 5
     videocapture = cv2.VideoCapture(videopath)
     success, frame = videocapture.read()
+    total_frames = int(videocapture.get(cv2.CAP_PROP_FRAME_COUNT))
+    inner_pbar.reset(total=total_frames)
     frame_number = 1
     faces_per_person = [[np.zeros((224, 224))]]
     original_faces = [-1]
@@ -115,6 +116,7 @@ def read_detect_track_faces(videopath, facedetector, display=True):
         success, frame = videocapture.read()
         if success == False:
             break
+        inner_pbar.update(1)
         if (frame_number % detection_frame_rate == 0) or (frame_number == 1):
             faces = facedetector.detect(frame)
         if faces.shape[0] == 0:
@@ -131,26 +133,14 @@ def read_detect_track_faces(videopath, facedetector, display=True):
             if len(faces_per_person) <= person_id:
                 faces_per_person.append([])
                 original_faces.append(person_id)
-                # for i in range(1, person_id - 1):
-                #     if original_faces[i] != i:
-                #         continue
-                #     faceresult = DeepFace.verify(faces_per_person[original_faces[i]][0], face,enforce_detection=False)
-                #     if faceresult['verified'] == True and faceresult['distance']<=0.15:
-                #         print('Distance',faceresult['distance'])
-                #         original_faces[person_id] = original_faces[i]
-                #         break
-                # else:
-                #     original_faces[person_id] = person_id
             faces_per_person[original_faces[person_id]].append(face)
-            data = {'frame number': str(frame_number + 1), 'person number': str(int(tracker[-1])),
-                    'bounding box': str(tracker[:-1])}
-            print(data)
+            logger.trace(
+                f'Detected Face :Frame Number: {frame_number} , Person Number: {int(tracker[-1])}, Bounding Box: {str(tracker[:-1])}')
             if display:
                 cv2.rectangle(img, (tracker[0], tracker[1]), (tracker[2], tracker[3]), (0, 0, 255), 2)
         if display:
             cv2.imshow('Face Tracker', cv2.resize(img, (320, 240)))
-            if cv2.waitKey(1) == ord('q'):
-                return
+            cv2.waitKey(1)
     return faces_per_person
 
 
@@ -163,12 +153,16 @@ def parse_args():
 
 
 if __name__ == "__main__":
+    init(autoreset=True)
+    logger.remove(0)
+    logger.add("output.log", level="TRACE")
     args = parse_args()
     detector_name = "mymodel"
     video_file_path = args.videofile
     video_dir_path = args.videopath
+    inner_pbar = tqdm(total=100, desc=Fore.GREEN + "Processing Video", position=1, leave=True)
     if video_dir_path is None:
-        print('Single File Mode')
+        logger.info('Single File Mode')
         output_path = f'./test/output'
         facedetector = FaceDetector(detector_name)
         result = read_detect_track_faces(video_file_path, facedetector, True)
@@ -185,19 +179,18 @@ if __name__ == "__main__":
                 out.write(frame)
             out.release()
     else:
-        print('Video Directory Mode')
+        logger.info('Video Directory Mode')
         video_files = list(Path(video_dir_path).rglob("*.mp4"))
+        outer_pbar = tqdm(total=len(video_files), desc=Fore.RED + "Processing Files", position=0, leave=True)
         for videofilename in video_files:
             if videofilename.is_file():
                 relative_path = videofilename.relative_to(video_dir_path)
-                print(relative_path)
                 KalmanTracker.reset_counter()
                 videofilename = str(videofilename)
-                # print(videofilename)
                 output_path = Path('test') / 'output' / relative_path
-                # print(output_path)
+                logger.success(f'Converting from {relative_path} to {videofilename}')
                 facedetector = FaceDetector(detector_name)
-                result = read_detect_track_faces(videofilename, facedetector, True)
+                result = read_detect_track_faces(videofilename, facedetector, False)
                 os.makedirs(output_path, exist_ok=True)
                 basefilename = os.path.basename(videofilename).replace('.', '_')
                 for i, frames in enumerate(result):
@@ -210,3 +203,6 @@ if __name__ == "__main__":
                     for frame in frames:
                         out.write(frame)
                     out.release()
+                outer_pbar.update(1)
+        outer_pbar.close()
+    inner_pbar.close()

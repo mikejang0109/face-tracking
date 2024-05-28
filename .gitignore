@@ -4,3 +4,5 @@ test
 models
 *.pyc
 **/__pycache__/
+test.py
+*.log
