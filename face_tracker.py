@@ -190,6 +190,7 @@ if __name__ == "__main__":
                 logger.success(f'Converting from {videofilename} to {output_path}')
                 if os.path.exists(output_path):
                     outer_pbar.update(1)
+                    logger.info(f'Skipping Video {relative_path} Because output already exists')
                     continue
                 os.makedirs(output_path, exist_ok=True)
                 basefilename = os.path.basename(videofilename).replace('.', '_')
