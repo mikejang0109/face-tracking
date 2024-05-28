@@ -124,12 +124,11 @@ def read_detect_track_faces(videopath, facedetector, display=True):
         trackers = facetracker(faces)
         frame_number += 1
         img = frame.copy()
-        ord_image = frame.copy()
-        trackers = ImageFaceExtractor.add_margin_to_detection(trackers, ord_image.shape)
+        trackers = ImageFaceExtractor.add_margin_to_detection(trackers, frame.shape)
         for tracker in trackers:
             tracker = tracker.astype(np.int32)
             person_id = int(tracker[-1])
-            face = cv2.resize(ord_image[tracker[1]:tracker[3], tracker[0]:tracker[2], :], (224, 224))
+            face = cv2.resize(frame[tracker[1]:tracker[3], tracker[0]:tracker[2], :], (224, 224))
             if len(faces_per_person) <= person_id:
                 faces_per_person.append([])
                 original_faces.append(person_id)
@@ -188,18 +187,22 @@ if __name__ == "__main__":
                 KalmanTracker.reset_counter()
                 videofilename = str(videofilename)
                 output_path = Path('test') / 'output' / relative_path
-                logger.success(f'Converting from {relative_path} to {videofilename}')
-                facedetector = FaceDetector(detector_name)
-                result = read_detect_track_faces(videofilename, facedetector, False)
+                logger.success(f'Converting from {videofilename} to {output_path}')
+                if os.path.exists(output_path):
+                    outer_pbar.update(1)
+                    continue
                 os.makedirs(output_path, exist_ok=True)
                 basefilename = os.path.basename(videofilename).replace('.', '_')
+                facedetector = FaceDetector(detector_name)
+                result = read_detect_track_faces(videofilename, facedetector, False)
                 for i, frames in enumerate(result):
                     if i == 0:
                         continue
                     if len(frames) == 0:
                         continue
                     fourcc = cv2.VideoWriter_fourcc(*'mp4v')
-                    out = cv2.VideoWriter(f'{output_path}/{basefilename}_person_{i}.mp4', fourcc, 30.0, (224, 224))
+                    output_filename = output_path.joinpath(f'{basefilename}_person_{i}.mp4')
+                    out = cv2.VideoWriter(f'{output_filename}', fourcc, 30.0, (224, 224))
                     for frame in frames:
                         out.write(frame)
                     out.release()
